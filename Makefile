@@ -1,9 +1,9 @@
 CC=g++
-CFLAGS=-std=c++11 -g -Wall -pthread -I./
-LDFLAGS= -lpthread -ltbb -lhiredis
-SUBDIRS=core db redis
+CFLAGS=-std=c++11 -g -Wall -pthread -I./ -O3
+LDFLAGS= -lpthread -ldl
+SUBDIRS=core db
 SUBSRCS=$(wildcard core/*.cc) $(wildcard db/*.cc)
-OBJECTS=$(SUBSRCS:.cc=.o)
+OBJECTS=$(SUBSRCS:.cc=.o) sqlite/sqlite3.o
 EXEC=ycsbc
 
 all: $(SUBDIRS) $(EXEC)
@@ -21,4 +21,3 @@ clean:
 	$(RM) $(EXEC)
 
 .PHONY: $(SUBDIRS) $(EXEC)
-
