@@ -10,9 +10,10 @@
 
 using namespace std;
 
-namespace ycsbc {
+extern "C" int printf(const char* fmt, ...);
+extern "C" int puts(const char* str);
 
-// std::mutex mutex_;
+namespace ycsbc {
 
 const int MAX_LEN = 4096 - 1;
 static char stmt[MAX_LEN + 1];

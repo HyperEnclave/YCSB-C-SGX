@@ -38,6 +38,8 @@ SGX_DEBUG ?= 1
 
 include $(SGX_SDK)/buildenv.mk
 
+export SGX_SDK
+
 ifeq ($(shell getconf LONG_BIT), 32)
 	SGX_ARCH := x86
 else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
@@ -84,7 +86,7 @@ else
 endif
 
 App_Cpp_Files := App/App.cpp
-App_Include_Paths := -IApp -I$(SGX_SDK)/include
+App_Include_Paths := -IApp -I$(SGX_SDK)/include -IYCSB
 
 App_C_Flags := -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -101,7 +103,7 @@ else
 endif
 
 App_Cpp_Flags := $(App_C_Flags)
-App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread
+App_Link_Flags := -L$(SGX_LIBRARY_PATH) -l$(Urts_Library_Name) -lpthread -std=c++11
 
 App_Cpp_Objects := $(App_Cpp_Files:.cpp=.o)
 
@@ -119,9 +121,9 @@ endif
 Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Cpp_Files := Enclave/Enclave.cpp
-Enclave_Include_Paths := -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx
+Enclave_Include_Paths := -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -IYCSB
 
-Enclave_C_Flags := $(Enclave_Include_Paths) -nostdinc -fvisibility=hidden -fpie -ffunction-sections -fdata-sections $(MITIGATION_CFLAGS) -DENCLAVE
+Enclave_C_Flags := $(Enclave_Include_Paths) -nostdinc -fvisibility=hidden -fpie -ffunction-sections -fdata-sections $(MITIGATION_CFLAGS) -DSGX_TRUSTED
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
 ifeq ($(CC_BELOW_4_9), 1)
 	Enclave_C_Flags += -fstack-protector
@@ -129,7 +131,7 @@ else
 	Enclave_C_Flags += -fstack-protector-strong
 endif
 
-Enclave_Cpp_Flags := $(Enclave_C_Flags) -nostdinc++
+Enclave_Cpp_Flags := $(Enclave_C_Flags) -nostdinc++ -std=c++11
 
 # Enable the security flags
 Enclave_Security_Link_Flags := -Wl,-z,relro,-z,now,-z,noexecstack
@@ -150,7 +152,7 @@ Enclave_Link_Flags := $(MITIGATION_LDFLAGS) $(Enclave_Security_Link_Flags) \
 	-Wl,--defsym,__ImageBase=0 -Wl,--gc-sections   \
 	-Wl,--version-script=Enclave/Enclave.lds
 
-Enclave_Cpp_Objects := $(sort $(Enclave_Cpp_Files:.cpp=.o))
+Enclave_Cpp_Objects := $(sort $(Enclave_Cpp_Files:.cpp=.o)) Enclave/ocall_interface.o YCSB/ycsbc.a
 
 Enclave_Name := enclave.so
 Signed_Enclave_Name := enclave.signed.so
@@ -224,14 +226,19 @@ App/Enclave_u.h: $(SGX_EDGER8R) Enclave/Enclave.edl
 App/Enclave_u.c: App/Enclave_u.h
 
 App/Enclave_u.o: App/Enclave_u.c
-	@$(CC) $(SGX_COMMON_CFLAGS) $(App_C_Flags) -c $< -o $@
+	@$(CC) $(SGX_COMMON_CFLAGS) $(App_C_Flags) -DSGX_UNTRUSTED  -c $< -o $@
 	@echo "CC   <=  $<"
 
 App/%.o: App/%.cpp  App/Enclave_u.h
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(App_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-$(App_Name): App/Enclave_u.o $(App_Cpp_Objects)
+# Compile ocalls
+App/ocalls.o: App/ocalls.c
+	$(CC) $(App_C_Flags) -c $< -o $@
+	@echo "CC   <=  $<"
+
+$(App_Name): App/Enclave_u.o App/ocalls.o $(App_Cpp_Objects)
 	@$(CXX) $^ -o $@ $(App_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -251,6 +258,19 @@ Enclave/%.o: Enclave/%.cpp Enclave/Enclave_t.h
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
+YCSB/ycsbc.a: YCSB/*/**.cc
+	@$(MAKE) -C YCSB CFLAGS="$(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags)" SGX=1
+
+# Preprocess sqlite3
+Enclave/ocall_interface.i: Enclave/ocall_interface.c
+	$(CC) -I$(SGX_SDK)/include -E $< -o $@
+	@echo "CC-Preprocess  <=  $<"
+
+# Compile ocall_interface
+Enclave/ocall_interface.o: Enclave/ocall_interface.i Enclave/Enclave_t.c
+	$(CC) $(Enclave_C_Flags) -c $< -o $@
+	@echo "CC  <=  $<"
+
 $(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
 	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
@@ -262,4 +282,5 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 .PHONY: clean
 
 clean:
+	@$(MAKE) -C YCSB clean
 	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*

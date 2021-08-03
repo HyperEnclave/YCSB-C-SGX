@@ -1,25 +1,34 @@
 CC=g++
-CFLAGS=-std=c++11 -O3 -Wall -I./
+CFLAGS ?= -std=c++11 -O3
 LDFLAGS= -lpthread -ldl
 SUBDIRS=core db sqlite
-SUBSRCS=$(wildcard core/*.cc) $(wildcard db/*.cc)
-OBJECTS=$(SUBSRCS:.cc=.o) sqlite/sqlite3.o
-EXEC=ycsbc
+OBJ_TRTS=core/core_workload.o db/db_factory.o db/sqlite_db.o
+LIB_TRTS=ycsbc.a
+SGX ?=
+
+ifeq ($(SGX), 1)
+	OBJ_TRTS += sqlite/sqlite3_sgx.o
+else
+	OBJ_TRTS += sqlite/sqlite3.o
+endif
 
 export CFLAGS
 
-all: $(SUBDIRS) $(EXEC)
+all: $(SUBDIRS) $(LIB_TRTS)
 
 $(SUBDIRS):
 	$(MAKE) -C $@
 
-$(EXEC): $(wildcard *.cc) $(OBJECTS)
-	$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
+$(LIB_TRTS): $(OBJ_TRTS)
+	ar rvs $@ $^
+
+native: ycsbc.cc $(SUBDIRS)
+	$(CC) $(CFLAGS) -I. ycsbc.cc $(OBJ_TRTS) $(LDFLAGS) -o ycsbc
 
 clean:
 	for dir in $(SUBDIRS); do \
 		$(MAKE) -C $$dir $@; \
 	done
-	$(RM) $(EXEC)
+	$(RM) *.o *.a
 
 .PHONY: $(SUBDIRS) $(EXEC)

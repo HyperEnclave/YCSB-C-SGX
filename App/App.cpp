@@ -31,10 +31,15 @@
 
 
 #include <stdio.h>
+#include <iostream>
 
 #include "sgx_urts.h"
 #include "App.h"
 #include "Enclave_u.h"
+
+#include "ycsbc_urts.h"
+
+using namespace std;
 
 /* Global EID shared by multiple threads */
 sgx_enclave_id_t global_eid = 0;
@@ -161,18 +166,29 @@ int initialize_enclave(void)
     return 0;
 }
 
-/* OCall functions */
-void ocall_print_string(const char *str)
-{
-    /* Proxy/Bridge will check the length and null-terminate
-     * the input string to prevent buffer overflow.
-     */
-    printf("%s", str);
+void ocall_print_error(const char *str){
+    cerr << str << endl;
 }
 
+void ocall_print_string(const char *str)
+{
+    cout << str;
+}
+
+void ocall_println_string(const char *str)
+{
+    cout << str << endl;
+}
+
+int DelegateClient(const int num_ops, bool is_loading)
+{
+    int ret;
+    ecall_delegateclient(global_eid, &ret, num_ops, is_loading);
+    return ret;
+}
 
 /* Application entry */
-int SGX_CDECL main(int argc, char *argv[])
+int SGX_CDECL main(int argc, const char *argv[])
 {
     (void)(argc);
     (void)(argv);
@@ -182,6 +198,19 @@ int SGX_CDECL main(int argc, char *argv[])
         printf("Error: enclave initialization failed\n");
         return -1;
     }
+
+    utils::Properties props;
+    string file_name = ParseCommandLine(argc, argv, props);
+
+    for (auto kv : props.properties())
+    {
+        // cout<<kv.first<<' '<<kv.second<<endl;
+        ecall_set_property(global_eid, kv.first.c_str(), kv.second.c_str());
+    }
+
+    int ret;
+    ecall_create_db(global_eid, &ret);
+    run_benchmark(props, file_name);
 
     /* Destroy the enclave */
     sgx_destroy_enclave(global_eid);

@@ -31,23 +31,26 @@
 
 #include "Enclave.h"
 #include "Enclave_t.h" /* print_string */
-#include <stdarg.h>
-#include <stdio.h> /* vsnprintf */
-#include <string.h>
 #include <stdlib.h>
+#include <assert.h>
 #include <sgx_trts.h>
 
-uint32_t rand()
+#include "core/utils.h"
+#include "core/client.h"
+#include "core/core_workload.h"
+#include "db/db_factory.h"
+
+using namespace std;
+
+utils::Properties g_props;
+ycsbc::DB *g_db;
+ycsbc::CoreWorkload g_wl;
+
+int puts(const char* str)
 {
-    uint32_t val;
-    sgx_read_rand((unsigned char *) &val, 4);
-    return val;
+    return printf("%s\n", str);
 }
 
-/*
- * printf:
- *   Invokes OCALL to display the enclave buffer to the terminal.
- */
 int printf(const char* fmt, ...)
 {
     char buf[BUFSIZ] = { '\0' };
@@ -59,4 +62,43 @@ int printf(const char* fmt, ...)
     return (int)strnlen(buf, BUFSIZ - 1) + 1;
 }
 
-void ecall_empty() {}
+uint32_t rand()
+{
+    uint32_t val;
+    sgx_read_rand((unsigned char *) &val, 4);
+    return val;
+}
+
+int ecall_delegateclient(const int num_ops, int is_loading)
+{
+    g_db->Init();
+    ycsbc::Client client(*g_db, g_wl);
+    int oks = 0;
+    for (int i = 0; i < num_ops; ++i) {
+        if (is_loading) {
+            oks += client.DoInsert();
+        } else {
+            oks += client.DoTransaction();
+        }
+    }
+    g_db->Close();
+    return oks;
+}
+
+void ecall_set_property(const char* key, const char* value)
+{
+    g_props.SetProperty(key, value);
+}
+
+int ecall_create_db()
+{
+    g_db = ycsbc::DBFactory::CreateDB(g_props);
+    if (!g_db) {
+        printf("Unknown database name %s\n", g_props["dbname"].c_str());
+        return -1;
+    }
+
+    g_wl.Init(g_props);
+
+    return 0;
+}

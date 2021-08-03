@@ -14,6 +14,10 @@
 #include <exception>
 #include <random>
 
+#ifdef SGX_TRUSTED
+extern "C" uint32_t rand();
+#endif
+
 namespace utils {
 
 const uint64_t kFNVOffsetBasis64 = 0xCBF29CE484222325;

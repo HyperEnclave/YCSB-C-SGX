@@ -9,7 +9,7 @@
 #include "db/db_factory.h"
 
 #include <string>
-#include "db/basic_db.h"
+// #include "db/basic_db.h"
 // #include "db/lock_stl_db.h"
 // #include "db/redis_db.h"
 // #include "db/tbb_rand_db.h"
@@ -21,9 +21,9 @@ using ycsbc::DB;
 using ycsbc::DBFactory;
 
 DB* DBFactory::CreateDB(utils::Properties &props) {
-  if (props["dbname"] == "basic") {
-    return new BasicDB;
-  }
+  // if (props["dbname"] == "basic") {
+  //   return new BasicDB;
+  // }
   // else if (props["dbname"] == "lock_stl") {
   //   return new LockStlDB;
   // } else if (props["dbname"] == "redis") {
@@ -35,7 +35,7 @@ DB* DBFactory::CreateDB(utils::Properties &props) {
   // } else if (props["dbname"] == "tbb_scan") {
   //   return new TbbScanDB;
   // } else
-  else if (props["dbname"] == "sqlite") {
+  if (props["dbname"] == "sqlite") {
     return new SqliteDB;
   } else return NULL;
 }

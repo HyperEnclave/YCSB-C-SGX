@@ -11,7 +11,6 @@
 
 #include <string>
 #include <map>
-#include <fstream>
 #include <cassert>
 #include "utils.h"
 
@@ -25,7 +24,7 @@ class Properties {
   const std::map<std::string, std::string> &properties() const;
 
   void SetProperty(const std::string &key, const std::string &value);
-  bool Load(std::ifstream &input);
+  // bool Load(std::ifstream &input);
  private:
   std::map<std::string, std::string> properties_;
 };
@@ -51,19 +50,6 @@ inline void Properties::SetProperty(const std::string &key,
   properties_[key] = value;
 }
 
-inline bool Properties::Load(std::ifstream &input) {
-  if (!input.is_open()) throw utils::Exception("File not open!");
-
-  while (!input.eof() && !input.bad()) {
-    std::string line;
-    std::getline(input, line);
-    if (line[0] == '#') continue;
-    size_t pos = line.find_first_of('=');
-    if (pos == std::string::npos) continue;
-    SetProperty(Trim(line.substr(0, pos)), Trim(line.substr(pos + 1)));
-  }
-  return true;
-}
 
 } // utils
 

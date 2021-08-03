@@ -1,11 +1,3 @@
-//
-//  ycsbc.cc
-//  YCSB-C
-//
-//  Created by Jinglei Ren on 12/19/14.
-//  Copyright (c) 2014 Jinglei Ren <jinglei@ren.systems>.
-//
-
 #include <cstring>
 #include <string>
 #include <iostream>
@@ -16,7 +8,6 @@
 #include "core/timer.h"
 #include "core/client.h"
 #include "core/core_workload.h"
-#include "db/db_factory.h"
 
 using namespace std;
 
@@ -24,43 +15,17 @@ void UsageMessage(const char *command);
 bool StrStartWith(const char *str, const char *pre);
 string ParseCommandLine(int argc, const char *argv[], utils::Properties &props);
 
-int DelegateClient(ycsbc::DB *db, ycsbc::CoreWorkload *wl, const int num_ops,
-    bool is_loading) {
-  db->Init();
-  ycsbc::Client client(*db, *wl);
-  int oks = 0;
-  for (int i = 0; i < num_ops; ++i) {
-    if (is_loading) {
-      oks += client.DoInsert();
-    } else {
-      oks += client.DoTransaction();
-    }
-  }
-  db->Close();
-  return oks;
-}
+extern "C" int DelegateClient(const int num_ops, bool is_loading);
 
-int main(const int argc, const char *argv[]) {
-  utils::Properties props;
-  string file_name = ParseCommandLine(argc, argv, props);
-
-  ycsbc::DB *db = ycsbc::DBFactory::CreateDB(props);
-  if (!db) {
-    cout << "Unknown database name " << props["dbname"] << endl;
-    exit(0);
-  }
-
-  ycsbc::CoreWorkload wl;
-  wl.Init(props);
-
+void run_benchmark(const utils::Properties& props, const std::string& file_name) {
   const int num_threads = stoi(props.GetProperty("threadcount", "1"));
 
   // Loads data
   vector<future<int>> actual_ops;
-  int total_ops = stoi(props[ycsbc::CoreWorkload::RECORD_COUNT_PROPERTY]);
+  int total_ops = stoi(props["recordcount"]);
   for (int i = 0; i < num_threads; ++i) {
     actual_ops.emplace_back(async(launch::async,
-        DelegateClient, db, &wl, total_ops / num_threads, true));
+        DelegateClient, total_ops / num_threads, true));
   }
   assert((int)actual_ops.size() == num_threads);
 
@@ -73,12 +38,12 @@ int main(const int argc, const char *argv[]) {
 
   // Peforms transactions
   actual_ops.clear();
-  total_ops = stoi(props[ycsbc::CoreWorkload::OPERATION_COUNT_PROPERTY]);
+  total_ops = stoi(props["operationcount"]);
   utils::Timer<double> timer;
   timer.Start();
   for (int i = 0; i < num_threads; ++i) {
     actual_ops.emplace_back(async(launch::async,
-        DelegateClient, db, &wl, total_ops / num_threads, false));
+        DelegateClient, total_ops / num_threads, false));
   }
   assert((int)actual_ops.size() == num_threads);
 
@@ -162,6 +127,7 @@ string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) 
       input.close();
       argindex++;
     } else {
+    //   printf("Unknown option '%s'\n", argv[argindex]);
       cout << "Unknown option '" << argv[argindex] << "'" << endl;
       exit(0);
     }
@@ -176,12 +142,12 @@ string ParseCommandLine(int argc, const char *argv[], utils::Properties &props) 
 }
 
 void UsageMessage(const char *command) {
-  cout << "Usage: " << command << " [options]" << endl;
-  cout << "Options:" << endl;
-  cout << "  -threads n: execute using n threads (default: 1)" << endl;
-  cout << "  -db dbname: specify the name of the DB to use (default: basic)" << endl;
-  cout << "  -P propertyfile: load properties from the given file. Multiple files can" << endl;
-  cout << "                   be specified, and will be processed in the order specified" << endl;
+  printf("Usage: %s [options]\n", command);
+  printf("Options:\n");
+  printf("  -threads n: execute using n threads (default: 1)\n");
+  printf("  -db dbname: specify the name of the DB to use (default: basic)\n");
+  printf("  -P propertyfile: load properties from the given file. Multiple files can\n");
+  printf("                   be specified, and will be processed in the order specified\n");
 }
 
 inline bool StrStartWith(const char *str, const char *pre) {
