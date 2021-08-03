@@ -1,10 +1,12 @@
 CC=g++
-CFLAGS=-std=c++11 -g -Wall -pthread -I./
-LDFLAGS= -lpthread -ltbb -lhiredis
-SUBDIRS=core db redis
+CFLAGS=-std=c++11 -O3 -Wall -I./
+LDFLAGS= -lpthread -ldl
+SUBDIRS=core db sqlite
 SUBSRCS=$(wildcard core/*.cc) $(wildcard db/*.cc)
-OBJECTS=$(SUBSRCS:.cc=.o)
+OBJECTS=$(SUBSRCS:.cc=.o) sqlite/sqlite3.o
 EXEC=ycsbc
+
+export CFLAGS
 
 all: $(SUBDIRS) $(EXEC)
 

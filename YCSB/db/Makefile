@@ -1,13 +1,11 @@
 CC=g++
-CFLAGS=-std=c++11 -c -g -Wall -fgnu-tm -O3
-INCLUDES=-I../
-SOURCES=$(wildcard *.cc)
-OBJECTS=$(SOURCES:.cc=.o)
+SRC=$(wildcard *.cc)
+OBJ=$(SRC:.cc=.o)
 
-all: $(SOURCES) $(OBJECTS)
+all: $(OBJ)
 
-.cc.o:
-	$(CC) $(CFLAGS) $(INCLUDES) $< -o $@
+%.o: %.cc
+	$(CC) $(CFLAGS) -I../ -c $< -o $@
 
 clean:
-	$(RM) $(OBJECTS)
+	$(RM) *.o *.a

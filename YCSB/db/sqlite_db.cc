@@ -7,7 +7,6 @@
 
 #include <assert.h>
 #include <cstring>
-#include <iostream>
 
 using namespace std;
 
@@ -15,23 +14,22 @@ namespace ycsbc {
 
 // std::mutex mutex_;
 
-const int MAX_LEN = 4096 - 10;
-static char stmt[MAX_LEN + 10];
+const int MAX_LEN = 4096 - 1;
+static char stmt[MAX_LEN + 1];
 
 static int callback(void *NotUsed, int argc, char **argv, char **azColName){
     int i;
     for(i = 0; i < argc; i++){
         std::string azColName_str = azColName[i];
         std::string argv_str = (argv[i] ? argv[i] : "NULL");
-        ocall_print_string((azColName_str + " = " + argv_str + "\n").c_str());
+        printf("%s", (azColName_str + " = " + argv_str + "\n").c_str());
     }
-    ocall_print_string("\n");
+    puts("");
     return 0;
 }
 
 int SqliteDB::execute_sql_key(const char *sql, const std::string& key) {
     int rc = 0;
-    char *zErrMsg = 0;
     sqlite3_stmt *pStmt = 0;    /* The current SQL statement */
     rc = sqlite3_prepare_v2(this->db, stmt, -1, &pStmt, NULL);
     assert( rc==SQLITE_OK || pStmt==0 );
@@ -50,17 +48,13 @@ int SqliteDB::execute_sql_key(const char *sql, const std::string& key) {
 
 int SqliteDB::execute_sql_args(const char *sql, const std::vector<const std::string*>& args) {
     int rc = 0;
-    char *zErrMsg = 0;
     sqlite3_stmt *pStmt = 0;    /* The current SQL statement */
     rc = sqlite3_prepare_v2(this->db, stmt, -1, &pStmt, NULL);
     assert( rc==SQLITE_OK || pStmt==0 );
     if (rc) return rc;
 
-    // rc = sqlite3_bind_text(pStmt, 1, key.c_str(), key.length(), SQLITE_STATIC);
-    // if (rc) return rc;
-    for (int i = 0; i < args.size(); i++)
+    for (size_t i = 0; i < args.size(); i++)
     {
-        // cout<< i<<' '<<*args[i]<<endl;
         rc = sqlite3_bind_text(pStmt, i + 1, args[i]->c_str(), args[i]->length(), SQLITE_STATIC);
         if (rc) return rc;
     }
@@ -78,30 +72,30 @@ int SqliteDB::execute_sql(const char *sql) {
     char *zErrMsg = 0;
     rc = sqlite3_exec(this->db, sql, callback, 0, &zErrMsg);
     if (rc) {
-        ocall_print_string("SQLite error: ");
-        ocall_println_string(sqlite3_errmsg(db));
+        printf("SQLite error: ");
+        puts(sqlite3_errmsg(db));
         return rc;
     }
     return 0;
 }
 
-SqliteDB::SqliteDB() {
+void SqliteDB::Init() {
     const char dbname[] = ":memory:";
     int rc; // For return status of SQLite
     rc = sqlite3_open(dbname, &this->db); // Opening database
     if (rc) {
-        ocall_println_string("SQLite error - can't open database connection: ");
-        ocall_println_string(sqlite3_errmsg(this->db));
+        puts("SQLite error - can't open database connection: ");
+        puts(sqlite3_errmsg(this->db));
         return;
     }
-    ocall_print_string("Enclave: Created database connection to ");
-    ocall_println_string(dbname);
+    printf("Enclave: Created database connection to ");
+    puts(dbname);
 
     const char table_name[] = "usertable";
     snprintf(stmt, MAX_LEN, "DROP TABLE IF EXISTS %s; CREATE TABLE IF NOT EXISTS %s (YCSB_KEY VARCHAR(64) PRIMARY KEY", table_name, table_name);
-    for (int i = 0; i < 10; i++) {
+    for (size_t i = 0; i < 10; i++) {
         char field[256];
-        sprintf(field, ", FIELD%d TEXT", i);
+        snprintf(field, 255, ", FIELD%ld TEXT", i);
         strncat(stmt, field, MAX_LEN);
     }
     strncat(stmt, ");", MAX_LEN);
@@ -109,9 +103,9 @@ SqliteDB::SqliteDB() {
     assert(this->execute_sql(stmt) == 0);
 }
 
-SqliteDB::~SqliteDB() {
+void SqliteDB::Close() {
     sqlite3_close(this->db);
-    ocall_println_string("Enclave: Closed database connection");
+    puts("Enclave: Closed database connection");
 }
 
 int SqliteDB::Read(const std::string &table, const std::string &key,
@@ -122,9 +116,9 @@ int SqliteDB::Read(const std::string &table, const std::string &key,
         snprintf(stmt, MAX_LEN, "SELECT * FROM %s WHERE YCSB_KEY = ?", table.c_str());
     else
     {
-        strcpy(stmt, "SELECT ");
+        strncpy(stmt, "SELECT ", MAX_LEN);
         bool first = true;
-        for (int i = 0; i < fields->size(); i++)
+        for (size_t i = 0; i < fields->size(); i++)
         {
             if (first) first = false;
             else strncat(stmt, ",", MAX_LEN);
@@ -134,18 +128,6 @@ int SqliteDB::Read(const std::string &table, const std::string &key,
     }
     // puts(stmt);
     return this->execute_sql_key(stmt, key);
-    // exit(0);
-    // snprintf(cmd, 256, "DROP TABLE IF EXISTS %s; CREATE TABLE IF NOT EXISTS %s (YCSB_KEY VARCHAR(64) PRIMARY KEY", table_name, table_name);
-
-    // int rc;
-    // char *zErrMsg = 0;
-    // rc = sqlite3_exec(db, sql, callback, 0, &zErrMsg);
-    // if (rc) {
-    //     ocall_print_string("SQLite error: ");
-    //     ocall_println_string(sqlite3_errmsg(db));
-    //     return;
-    // }
-    // return 0;
 }
 
 int SqliteDB::Scan(const std::string &table, const std::string &key,
@@ -160,7 +142,7 @@ int SqliteDB::Update(const std::string &table, const std::string &key,
     snprintf(stmt, MAX_LEN, "UPDATE %s SET ", table.c_str());
     bool first = true;
     std::vector<const std::string*> args(values.size() + 1);
-    for (int i = 0; i < values.size(); i++)
+    for (size_t i = 0; i < values.size(); i++)
     {
         if (first) first = false;
         else strncat(stmt, ", ", MAX_LEN);
@@ -187,7 +169,7 @@ int SqliteDB::Insert(const std::string &table, const std::string &key,
 
     std::vector<const std::string*> args(values.size() + 1);
     args[0] = &key;
-    for (int i = 0; i < values.size(); i++)
+    for (size_t i = 0; i < values.size(); i++)
     {
         strncat(stmt, ", ?", MAX_LEN);
         args[i + 1] = &values[i].second;
