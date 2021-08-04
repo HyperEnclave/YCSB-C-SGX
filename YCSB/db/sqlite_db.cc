@@ -89,8 +89,8 @@ void SqliteDB::Init() {
         puts(sqlite3_errmsg(this->db));
         return;
     }
-    printf("Enclave: Created database connection to ");
-    puts(dbname);
+    // printf("Created database connection to ");
+    // puts(dbname);
 
     const char table_name[] = "usertable";
     snprintf(stmt, MAX_LEN, "DROP TABLE IF EXISTS %s; CREATE TABLE IF NOT EXISTS %s (YCSB_KEY VARCHAR(64) PRIMARY KEY", table_name, table_name);
@@ -100,13 +100,13 @@ void SqliteDB::Init() {
         strncat(stmt, field, MAX_LEN);
     }
     strncat(stmt, ");", MAX_LEN);
-    puts(stmt);
+    // puts(stmt);
     assert(this->execute_sql(stmt) == 0);
 }
 
 void SqliteDB::Close() {
     sqlite3_close(this->db);
-    puts("Enclave: Closed database connection");
+    // puts("Closed database connection");
 }
 
 int SqliteDB::Read(const std::string &table, const std::string &key,

@@ -6,7 +6,6 @@
 #include <future>
 #include "core/utils.h"
 #include "core/timer.h"
-#include "core/client.h"
 #include "core/core_workload.h"
 
 using namespace std;
@@ -53,6 +52,8 @@ void run_benchmark(const utils::Properties& props, const std::string& file_name)
     sum += n.get();
   }
   double duration = timer.End();
+
+  cerr << "# successful ops:\t" << sum << endl;
   cerr << "# Transaction throughput (KTPS)" << endl;
   cerr << props["dbname"] << '\t' << file_name << '\t' << num_threads << '\t';
   cerr << total_ops / duration / 1000 << endl;
