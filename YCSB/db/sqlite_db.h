@@ -20,8 +20,8 @@ namespace ycsbc {
 
 class SqliteDB : public DB {
  public:
-  void Init();
-  void Close();
+  SqliteDB();
+  ~SqliteDB();
 
   int Read(const std::string &table, const std::string &key,
            const std::vector<std::string> *fields,
@@ -37,10 +37,6 @@ class SqliteDB : public DB {
 
 private:
     sqlite3* db; // Database connection object
-
-    int execute_sql(const char *sql);
-    int execute_sql_key(const char *sql, const std::string& key);
-    int execute_sql_args(const char *sql, const std::vector<const std::string*>& args);
 };
 
 } // ycsbc

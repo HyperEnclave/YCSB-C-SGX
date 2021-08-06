@@ -19,20 +19,20 @@ namespace ycsbc {
 class Client {
  public:
   Client(DB &db, CoreWorkload &wl) : db_(db), workload_(wl) { }
-  
+
   virtual bool DoInsert();
   virtual bool DoTransaction();
-  
+
   virtual ~Client() { }
-  
+
  protected:
-  
+
   virtual int TransactionRead();
   virtual int TransactionReadModifyWrite();
   virtual int TransactionScan();
   virtual int TransactionUpdate();
   virtual int TransactionInsert();
-  
+
   DB &db_;
   CoreWorkload &workload_;
 };
@@ -75,7 +75,7 @@ inline int Client::TransactionRead() {
   std::vector<DB::KVPair> result;
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
-    fields.push_back("field" + workload_.NextFieldName());
+    fields.push_back(workload_.NextFieldName());
     return db_.Read(table, key, &fields, result);
   } else {
     return db_.Read(table, key, NULL, result);
@@ -89,7 +89,7 @@ inline int Client::TransactionReadModifyWrite() {
 
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
-    fields.push_back("field" + workload_.NextFieldName());
+    fields.push_back(workload_.NextFieldName());
     db_.Read(table, key, &fields, result);
   } else {
     db_.Read(table, key, NULL, result);
@@ -111,7 +111,7 @@ inline int Client::TransactionScan() {
   std::vector<std::vector<DB::KVPair>> result;
   if (!workload_.read_all_fields()) {
     std::vector<std::string> fields;
-    fields.push_back("field" + workload_.NextFieldName());
+    fields.push_back(workload_.NextFieldName());
     return db_.Scan(table, key, len, &fields, result);
   } else {
     return db_.Scan(table, key, len, NULL, result);
@@ -136,7 +136,7 @@ inline int Client::TransactionInsert() {
   std::vector<DB::KVPair> values;
   workload_.BuildValues(values);
   return db_.Insert(table, key, values);
-} 
+}
 
 } // ycsbc
 

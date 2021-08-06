@@ -259,7 +259,7 @@ Enclave/%.o: Enclave/%.cpp Enclave/Enclave_t.h
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-YCSB/ycsbc.a: YCSB/*/**.cc
+YCSB/ycsbc.a: YCSB/*/**.cc YCSB/*/**.h
 	@$(MAKE) -C YCSB CFLAGS="$(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags)" SGX=1
 
 # Preprocess sqlite3
