@@ -1,7 +1,7 @@
 # Yahoo! Cloud System Benchmark
 # Workload E: Short ranges
 #   Application example: threaded conversations, where each scan is for the posts in a given thread (assumed to be clustered by thread id)
-#                        
+#
 #   Scan/insert ratio: 95/5
 #   Default data size: 1 KB records (10 fields, 100 bytes each, plus key)
 #   Request distribution: zipfian
@@ -11,7 +11,7 @@
 # instead interspersed with posts from lots of other threads. The way the YCSB client works is that it will pick a start
 # key, and then request a number of records; this works fine even for hashed insertion.
 
-recordcount=100000
+recordcount=50000
 operationcount=100000
 workload=com.yahoo.ycsb.workloads.CoreWorkload
 
