@@ -153,7 +153,7 @@ Enclave_Link_Flags := $(MITIGATION_LDFLAGS) $(Enclave_Security_Link_Flags) \
 	-Wl,--defsym,__ImageBase=0 -Wl,--gc-sections   \
 	-Wl,--version-script=Enclave/Enclave.lds
 
-Enclave_Cpp_Objects := $(sort $(Enclave_Cpp_Files:.cpp=.o)) Enclave/ocall_interface.o YCSB/ycsbc.a
+Enclave_Cpp_Objects := $(sort $(Enclave_Cpp_Files:.cpp=.o)) Enclave/ocall_interface.o
 
 Enclave_Name := enclave.so
 Signed_Enclave_Name := enclave.signed.so
@@ -272,8 +272,8 @@ Enclave/ocall_interface.o: Enclave/ocall_interface.i Enclave/Enclave_t.c
 	$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC  <=  $<"
 
-$(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects)
-	@$(CXX) $^ -o $@ $(Enclave_Link_Flags)
+$(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects) YCSB/ycsbc.a
+	$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
 $(Signed_Enclave_Name): $(Enclave_Name)
@@ -283,5 +283,5 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 .PHONY: clean
 
 clean:
-	@$(MAKE) -C YCSB clean
+	# @$(MAKE) -C YCSB clean
 	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*
