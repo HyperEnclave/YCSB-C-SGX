@@ -47,15 +47,21 @@ else ifeq ($(findstring -m32, $(CXXFLAGS)), -m32)
 	SGX_ARCH := x86
 endif
 
+ifeq ($(SGX_MODE), HYPER)
+	SGX_SIGN = sgx_sign_hyper
+else
+	SGX_SIGN = sgx_sign
+endif
+
 ifeq ($(SGX_ARCH), x86)
 	SGX_COMMON_FLAGS := -m32
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib
-	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/sgx_sign
+	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x86/$(SGX_SIGN)
 	SGX_EDGER8R := $(SGX_SDK)/bin/x86/sgx_edger8r
 else
 	SGX_COMMON_FLAGS := -m64
 	SGX_LIBRARY_PATH := $(SGX_SDK)/lib64
-	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/sgx_sign
+	SGX_ENCLAVE_SIGNER := $(SGX_SDK)/bin/x64/$(SGX_SIGN)
 	SGX_EDGER8R := $(SGX_SDK)/bin/x64/sgx_edger8r
 endif
 
@@ -80,8 +86,10 @@ SGX_COMMON_CXXFLAGS := $(SGX_COMMON_FLAGS) -Wnon-virtual-dtor -std=c++11
 
 ######## App Settings ########
 
-ifneq ($(SGX_MODE), HW)
+ifeq ($(SGX_MODE), SIM)
 	Urts_Library_Name := sgx_urts_sim
+else ifeq ($(SGX_MODE), HYPER)
+	Urts_Library_Name := sgx_urts_hyper
 else
 	Urts_Library_Name := sgx_urts
 endif
@@ -112,9 +120,12 @@ App_Name := app
 
 ######## Enclave Settings ########
 
-ifneq ($(SGX_MODE), HW)
+ifeq ($(SGX_MODE), SIM)
 	Trts_Library_Name := sgx_trts_sim
 	Service_Library_Name := sgx_tservice_sim
+else ifeq ($(SGX_MODE), HYPER)
+	Trts_Library_Name := sgx_trts_hyper
+	Service_Library_Name := sgx_tservice_hyper
 else
 	Trts_Library_Name := sgx_trts
 	Service_Library_Name := sgx_tservice
@@ -167,6 +178,14 @@ else ifeq ($(SGX_PRERELEASE), 1)
 else
 	Build_Mode = HW_RELEASE
 endif
+else ifeq ($(SGX_MODE), HYPER)
+ifeq ($(SGX_DEBUG), 1)
+	Build_Mode = HYPER_DEBUG
+else ifeq ($(SGX_PRERELEASE), 1)
+	Build_Mode = HYPER_PRERELEASE
+else
+	Build_Mode = HYPER_RELEASE
+endif
 else
 ifeq ($(SGX_DEBUG), 1)
 	Build_Mode = SIM_DEBUG
@@ -198,12 +217,18 @@ ifeq ($(Build_Mode), HW_DEBUG)
 	@echo "The project has been built in debug hardware mode."
 else ifeq ($(Build_Mode), SIM_DEBUG)
 	@echo "The project has been built in debug simulation mode."
+else ifeq ($(Build_Mode), HYPER_DEBUG)
+	@echo "The project has been built in debug hyper mode."
 else ifeq ($(Build_Mode), HW_PRERELEASE)
 	@echo "The project has been built in pre-release hardware mode."
 else ifeq ($(Build_Mode), SIM_PRERELEASE)
 	@echo "The project has been built in pre-release simulation mode."
-else
+else ifeq ($(Build_Mode), HYPER_PRERELEASE)
+	@echo "The project has been built in pre-release hyper mode."
+else ifeq ($(Build_Mode), SIM_RELEASE)
 	@echo "The project has been built in release simulation mode."
+else
+	@echo "The project has been built in release hyper mode."
 endif
 
 endif
@@ -221,7 +246,7 @@ endif
 ######## App Objects ########
 
 App/Enclave_u.h: $(SGX_EDGER8R) Enclave/Enclave.edl
-	@cd App && $(SGX_EDGER8R) --untrusted ../Enclave/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
+	@cd App && $(SGX_EDGER8R) --sgx-mode $(SGX_MODE) --untrusted ../Enclave/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
 App/Enclave_u.c: App/Enclave_u.h
@@ -246,7 +271,7 @@ $(App_Name): App/Enclave_u.o App/ocalls.o $(App_Cpp_Objects)
 ######## Enclave Objects ########
 
 Enclave/Enclave_t.h: $(SGX_EDGER8R) Enclave/Enclave.edl
-	@cd Enclave && $(SGX_EDGER8R) --trusted ../Enclave/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
+	@cd Enclave && $(SGX_EDGER8R) --sgx-mode $(SGX_MODE) --trusted ../Enclave/Enclave.edl --search-path ../Enclave --search-path $(SGX_SDK)/include
 	@echo "GEN  =>  $@"
 
 Enclave/Enclave_t.c: Enclave/Enclave_t.h
