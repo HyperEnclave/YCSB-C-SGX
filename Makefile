@@ -95,7 +95,7 @@ else
 endif
 
 App_Cpp_Files := App/App.cpp
-App_Include_Paths := -IApp -I$(SGX_SDK)/include -IYCSB
+App_Include_Paths := -IApp -I$(SGX_SDK)/include -IYCSB-C
 
 App_C_Flags := -fPIC -Wno-attributes $(App_Include_Paths)
 
@@ -133,7 +133,7 @@ endif
 Crypto_Library_Name := sgx_tcrypto
 
 Enclave_Cpp_Files := Enclave/Enclave.cpp
-Enclave_Include_Paths := -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -IYCSB
+Enclave_Include_Paths := -IEnclave -I$(SGX_SDK)/include -I$(SGX_SDK)/include/tlibc -I$(SGX_SDK)/include/libcxx -IYCSB-C
 
 Enclave_C_Flags := $(Enclave_Include_Paths) -nostdinc -fvisibility=hidden -fpie -ffunction-sections -fdata-sections $(MITIGATION_CFLAGS) -DSGX_TRUSTED
 CC_BELOW_4_9 := $(shell expr "`$(CC) -dumpversion`" \< "4.9")
@@ -284,8 +284,8 @@ Enclave/%.o: Enclave/%.cpp Enclave/Enclave_t.h
 	@$(CXX) $(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags) -c $< -o $@
 	@echo "CXX  <=  $<"
 
-YCSB/ycsbc.a: YCSB/*/**.cc YCSB/*/**.h
-	@$(MAKE) -C YCSB CFLAGS="$(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags)" SGX=1
+YCSB-C/ycsbc_sgx.a: YCSB-C/*/**.cc YCSB-C/*/**.h
+	@$(MAKE) -C YCSB-C CFLAGS="$(SGX_COMMON_CXXFLAGS) $(Enclave_Cpp_Flags)" SGX=1
 
 # Preprocess sqlite3
 Enclave/ocall_interface.i: Enclave/ocall_interface.c
@@ -297,7 +297,7 @@ Enclave/ocall_interface.o: Enclave/ocall_interface.i Enclave/Enclave_t.c
 	$(CC) $(Enclave_C_Flags) -c $< -o $@
 	@echo "CC  <=  $<"
 
-$(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects) YCSB/ycsbc.a
+$(Enclave_Name): Enclave/Enclave_t.o $(Enclave_Cpp_Objects) YCSB-C/ycsbc_sgx.a
 	$(CXX) $^ -o $@ $(Enclave_Link_Flags)
 	@echo "LINK =>  $@"
 
@@ -305,8 +305,11 @@ $(Signed_Enclave_Name): $(Enclave_Name)
 	@$(SGX_ENCLAVE_SIGNER) sign -key Enclave/Enclave_private_test.pem -enclave $(Enclave_Name) -out $@ -config $(Enclave_Config_File)
 	@echo "SIGN =>  $@"
 
-.PHONY: clean
+.PHONY: clean native
+
+native:
+	@$(MAKE) -C YCSB-C native
 
 clean:
-	# @$(MAKE) -C YCSB clean
+	@$(MAKE) -C YCSB-C clean
 	@rm -f .config_* $(App_Name) $(Enclave_Name) $(Signed_Enclave_Name) $(App_Cpp_Objects) App/Enclave_u.* $(Enclave_Cpp_Objects) Enclave/Enclave_t.*

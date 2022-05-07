@@ -3,7 +3,7 @@ CFLAGS ?=-m64 -O2 -Wall -Wextra -Winit-self -Wpointer-arith -Wreturn-type -Waddr
 LDFLAGS= -lpthread -ldl
 SUBDIRS=core db sqlite
 OBJ_TRTS=core/core_workload.o db/db_factory.o db/sqlite_db.o
-LIB_TRTS=ycsbc.a
+LIB_TRTS=ycsbc_sgx.a
 SGX ?=
 
 ifeq ($(SGX), 1)
