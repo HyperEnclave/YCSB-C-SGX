@@ -4,7 +4,7 @@ git submodule init
 git submodule update
 
 cd YCSB-C
-git apply ../YCSB-C.patch >/dev/null 2>&1 || git apply ../patches/YCSB-C.patch -R --check
+git apply ../patches/YCSB-C.patch >/dev/null 2>&1 || git apply ../patches/YCSB-C.patch -R --check
 cd ..
 
 wget https://www.sqlite.org/2017/sqlite-amalgamation-3190300.zip
