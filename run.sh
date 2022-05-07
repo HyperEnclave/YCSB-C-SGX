@@ -2,11 +2,11 @@
 
 cd $(dirname "$0")
 
-app=./app
-res_dir=results-$1
+app=$1
+res_dir=results-$2
 op_count=100000
 repeat_num=5
-workload_dir=./YCSB/workloads
+workload_dir=./YCSB-C/workloads
 workload=$workload_dir/workloada.spec
 rec_counts="5 10 20 40 60 80 100 120 140 160 180 200"
 
