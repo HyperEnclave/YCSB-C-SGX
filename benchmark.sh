@@ -86,13 +86,13 @@ function stats() {
     average=$(echo "$*" | tr " " "\n" | awk '{sum+=$0; n++} END {print sum/n}')
 }
 
-echo "rec_count,$(seq -s, $runs),average,median" > $res_dir/summary_throughput.csv
+echo "rec_count,$(seq -s, $runs),average,median" > $res_dir/throughput.csv
 for n in $rec_counts
 do
     stats ${all_tput[$n]}
-    echo "$(expr $n \* 1000),$list,$average,$median" >> $res_dir/summary_throughput.csv
+    echo "$(expr $n \* 1000),$list,$average,$median" >> $res_dir/throughput.csv
 done
 
 echo ""
 echo "Summary (Throughput):"
-cat $res_dir/summary_throughput.csv
+cat $res_dir/throughput.csv
